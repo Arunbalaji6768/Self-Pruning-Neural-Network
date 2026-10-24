@@ -2,6 +2,8 @@
 
 A neural network that **learns to prune its own weights** during training using learnable gate parameters with L1 sparsity regularization.
 
+🔗 **Live results page:** https://self-pruning-neural-network.vercel.app
+
 ## ✨ Key Idea
 
 Instead of pruning after training, this network prunes **during** training. Each weight has a learnable *gate* — an L1 penalty pushes unimportant gates to zero, automatically removing unnecessary connections.
@@ -21,7 +23,7 @@ Forward Pass:
 
 ## 📊 Experiments
 
-Three sparsity strengths tested (results on CIFAR-10, 15 epochs):
+Three sparsity strengths tested (results on CIFAR-10, 5 epochs logged in `experiment_results.json`):
 
 | Lambda | Pruning Pressure | Test Accuracy | Sparsity |
 |--------|------------------|---------------|----------|

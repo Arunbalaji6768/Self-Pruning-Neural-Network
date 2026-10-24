@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Self-Pruning Neural Network</title>
+<style>
+:root{--bg:#0f1419;--card:#18202a;--fg:#e8edf2;--mut:#93a1b0;--acc:#4cc9a6;--warn:#f2b84b;--line:#2a3542}
+@media(prefers-color-scheme:light){:root{--bg:#f6f8fa;--card:#fff;--fg:#14202b;--mut:#5b6b7a;--acc:#0b8f6f;--warn:#b07400;--line:#dde3ea}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:2rem;margin:0 0 8px}h2{margin:40px 0 12px;font-size:1.25rem}
+p{color:var(--mut);margin:8px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:14px 0}
+code,pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:.9rem}
+pre{padding:14px;overflow:auto;color:var(--fg)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit}
+.tabs button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.stat b{display:block;font-size:2rem;color:var(--acc)}.stat span{color:var(--mut);font-size:.9rem}
+.bar{margin:10px 0}.bar .l{display:flex;justify-content:space-between;font-size:.9rem;color:var(--mut)}
+.track{height:12px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.fill{height:100%;background:var(--acc);transition:width .4s}
+img{max-width:100%;border-radius:8px;border:1px solid var(--line);background:#fff}
+a{color:var(--acc)}.note{border-left:3px solid var(--warn);padding:4px 12px;color:var(--mut)}
+table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+</style></head><body><main>
+<h1>Self-Pruning Neural Network</h1>
+<p>A CIFAR-10 classifier that learns to prune its own weights <em>during</em> training, using a learnable gate on every weight and an L1 sparsity penalty.</p>
+<p><a href="https://github.com/Arunbalaji6768/Self-Pruning-Neural-Network">Code on GitHub</a> · <a href="https://github.com/Arunbalaji6768/Self-Pruning-Neural-Network/blob/main/REPORT.md">Full report</a></p>
+
+<h2>How it works</h2>
+<div class="card"><pre>gates          = sigmoid(gate_scores)      # each in (0, 1)
+pruned_weights = weight * gates            # gate near 0 = weight removed
+loss           = CrossEntropy + lambda * sum(gates)</pre>
+<p>A higher <code>lambda</code> pushes more gates to zero. The network trades accuracy for fewer connections. A weight counts as pruned when its gate is below 0.01.</p></div>
+
+<h2>Explore the results</h2>
+<div class="card">
+<div class="tabs" id="tabs" role="group" aria-label="Pruning strength"></div>
+<div class="stats"><div class="stat"><b id="acc"></b><span>test accuracy</span></div><div class="stat"><b id="sp"></b><span>weights pruned</span></div></div>
+<p>Pruned weights by layer</p><div id="layers"></div>
+</div>
+
+<h2>All three runs</h2>
+<div class="card"><table id="tbl"></table></div>
+
+<h2>Plots from the experiment</h2>
+<div class="card"><p>Gate value distributions: a spike near 0 means many pruned connections.</p><img src="https://raw.githubusercontent.com/Arunbalaji6768/Self-Pruning-Neural-Network/main/gate_histograms.png" alt="Histograms of gate values for each lambda"></div>
+<div class="card"><p>Accuracy, loss and sparsity over training.</p><img src="https://raw.githubusercontent.com/Arunbalaji6768/Self-Pruning-Neural-Network/main/training_curves.png" alt="Training curves for each lambda"></div>
+
+<h2>Honest notes</h2>
+<div class="card note"><p>Numbers come from <code>experiment_results.json</code>, which logs 5 epochs per run. Accuracy is modest (59% at best) because the focus is the accuracy and sparsity trade-off, not a state-of-the-art score.</p>
+<p>Pruned weights are masked to near zero, not physically removed, so this does not yet give faster inference or lower memory. Real sparse inference is the next step.</p></div>
+</main>
+<script>
+const R=[{"lambda": 0.0001, "acc": 59.07, "sparsity": 76.51, "layers": {"fc1": 77.6, "fc2": 60.4, "fc3": 7.8}, "test_acc": [46.55, 52.26, 56.31, 57.82, 59.07], "epochs": 5}, {"lambda": 0.001, "acc": 49.92, "sparsity": 95.1, "layers": {"fc1": 96.4, "fc2": 76.1, "fc3": 20.7}, "test_acc": [43.23, 44.69, 47.12, 49.59, 49.92], "epochs": 5}, {"lambda": 0.01, "acc": 31.79, "sparsity": 99.68, "layers": {"fc1": 100.0, "fc2": 96.3, "fc3": 37.4}, "test_acc": [33.02, 32.38, 32.13, 32.98, 31.79], "epochs": 5}];
+const tabs=document.getElementById('tabs');
+function show(i){
+ [...tabs.children].forEach((b,j)=>b.setAttribute('aria-pressed',i===j));
+ const r=R[i];acc.textContent=r.acc.toFixed(2)+'%';sp.textContent=r.sparsity.toFixed(1)+'%';
+ layers.innerHTML=Object.entries(r.layers).map(([k,v])=>`<div class="bar"><div class="l"><span>${k}</span><span>${v}%</span></div><div class="track"><div class="fill" style="width:${v}%"></div></div></div>`).join('');
+}
+R.forEach((r,i)=>{const b=document.createElement('button');b.textContent='λ = '+r.lambda;b.onclick=()=>show(i);tabs.appendChild(b)});
+tbl.innerHTML='<tr><th>λ</th><th>Accuracy</th><th>Pruned</th><th>Epochs logged</th></tr>'+R.map(r=>`<tr><td>${r.lambda}</td><td>${r.acc.toFixed(2)}%</td><td>${r.sparsity.toFixed(2)}%</td><td>${r.epochs}</td></tr>`).join('');
+show(0);
+</script></body></html>
